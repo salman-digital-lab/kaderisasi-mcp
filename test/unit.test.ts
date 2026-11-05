@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { QueryError, wrapQuery } from "../src/db.ts";
-import { Signer } from "../src/tokens.ts";
+import { keyMatches } from "../src/app.ts";
 
 test("wrapQuery accepts one read statement and adds a row cap", () => {
   assert.equal(
@@ -30,15 +30,11 @@ test("wrapQuery accepts one read statement and adds a row cap", () => {
   }
 });
 
-test("Signer rejects forged, cross-purpose and expired blobs", () => {
-  const signer = new Signer("k".repeat(32));
-  const code = signer.sign("code", { a: 1 }, 60);
-  assert.equal(signer.verify<{ a: number }>("code", code)?.a, 1);
-  assert.equal(signer.verify("access", code), null, "purpose is bound");
-  assert.equal(new Signer("x".repeat(32)).verify("code", code), null);
-  const [body, mac] = code.split(".");
-  const forged = Buffer.from(JSON.stringify({ a: 2 })).toString("base64url");
-  assert.equal(signer.verify("code", `${forged}.${mac}`), null);
-  assert.equal(signer.verify("code", `${body}.${mac}.x`), null);
-  assert.equal(signer.verify("code", signer.sign("code", {}, -1)), null);
+test("keyMatches only accepts the exact key", () => {
+  const key = "a".repeat(64);
+  assert.equal(keyMatches(key, key), true);
+  assert.equal(keyMatches(undefined, key), false);
+  assert.equal(keyMatches("", key), false);
+  assert.equal(keyMatches(key.slice(1), key), false);
+  assert.equal(keyMatches(`${key}b`, key), false);
 });

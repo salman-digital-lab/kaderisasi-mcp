@@ -5,10 +5,9 @@ PostgreSQL database, so Claude can answer questions about Kaderisasi data
 through a **custom connector** (claude.ai → Settings → Connectors → Add custom
 connector).
 
-- Connector URL: `https://<PUBLIC_URL host>/mcp`
+- Connector URL: `https://<host>/mcp/<MCP_API_KEY>`
 - Tools: `list_tables`, `describe_table`, `query` (one SELECT per call)
-- Who can connect: active **Super Admins** only, through Google sign-in
-  (same Google client as the admin dashboard)
+- Who can connect: whoever has the key (one key, one user, no login screen)
 
 ## How it stays read-only
 
@@ -28,19 +27,17 @@ Only the `public` schema is exposed (`DB_SCHEMA`).
 
 ## Auth
 
-The server is its own OAuth 2.1 authorization server (dynamic client
-registration + PKCE), as Claude connectors require. It stores nothing:
-clients, codes and tokens are HMAC-signed with `MCP_SIGNING_KEY`.
+One API key, `MCP_API_KEY`, set in the deployment environment (never in the
+code or git). Claude's connector dialog only takes a URL, so the key goes in the
+path: `/mcp/<key>`. Clients that can send headers (Claude Code, MCP Inspector)
+can call `/mcp` with `Authorization: Bearer <key>` instead. A missing or wrong
+key gets `401`.
 
-- Sign-in page: Google Identity Services button → ID token verified against
-  Google's keys → admin looked up by Google identity, then by email.
-- Must be an active admin with `super_admin` as primary or additional role.
-  This is re-checked on every token refresh and at least every minute while
-  tokens are used, so deactivating the admin or removing the role cuts access.
-- Access tokens last 1 hour, refresh tokens 30 days. Rotating
-  `MCP_SIGNING_KEY` signs every client out.
-- Redirect URIs must be on `MCP_ALLOWED_REDIRECT_HOSTS` (default
-  `claude.ai,claude.com`).
+The URL is the secret: anyone who has it can read all data, including
+counseling. Don't paste it in chats or tickets. To cut access, change
+`MCP_API_KEY`, redeploy, and update the connector URL in Claude. Check that the
+reverse proxy's access logs don't keep full request paths, or treat those logs
+as secret.
 
 ## Setup
 
@@ -56,37 +53,30 @@ that add tables or columns** (new tables are invisible until then, and a new
 secret column is hidden only if its name matches the pattern; check the list in
 the script when adding one).
 
-### 2. Google client
-
-Add the server's origin (for example `https://mcp-kaderisasi.salmanitb.com`)
-to **Authorized JavaScript origins** of the admin dashboard's Google OAuth
-client. No client secret is needed.
-
-### 3. Deploy (Coolify)
+### 2. Deploy (Coolify)
 
 Dockerfile build, container port `3020`, health check `GET /health`. Set the
 variables from `.env.example`; use the `kaderisasi_mcp` DB user, never the
-owner account. `MCP_SIGNING_KEY`: `openssl rand -hex 32`.
+owner account. `MCP_API_KEY`: `openssl rand -hex 32`.
 
-### 4. Connect Claude
+### 3. Connect Claude
 
 claude.ai → Settings → Connectors → Add custom connector → Name
-`Kaderisasi`, URL `https://<host>/mcp` → sign in with Google as a Super Admin.
+`Kaderisasi`, URL `https://<host>/mcp/<MCP_API_KEY>`.
 
 ## Development
 
 ```sh
 npm ci
-cp .env.example .env   # fill in; for local use PUBLIC_URL=http://localhost:3020
+cp .env.example .env   # fill in
 npm run dev
 npm test               # unit tests, no DB
 npm run typecheck
 npm run format:check
 ```
 
-`npm run test:flow` runs the full OAuth + tool flow against a real database
-with Google sign-in stubbed. It needs `DB_*` and `TEST_SUPER_ADMIN_EMAIL` (an
-active Super Admin there) in the environment. It only reads.
+`npm run test:flow` runs the key check and every tool against a real database.
+It needs `DB_*` in the environment and only reads.
 
 Node 24 runs the TypeScript sources directly (type stripping); there is no
 build step. Keep to erasable TypeScript syntax (no enums, namespaces or

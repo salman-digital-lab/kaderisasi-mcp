@@ -2,14 +2,9 @@ import { z } from "zod";
 
 const Env = z.object({
   PORT: z.coerce.number().int().default(3020),
-  // Public HTTPS origin of this server, e.g. https://mcp-kaderisasi.salmanitb.com
-  PUBLIC_URL: z.url(),
-  // Signs OAuth clients, codes and tokens. Rotating it signs everyone out.
-  MCP_SIGNING_KEY: z.string().min(32),
-  // Same Google client as the admin dashboard (ID-token sign-in).
-  GOOGLE_CLIENT_ID: z.string().min(1),
-  // Hosts allowed as OAuth redirect targets.
-  MCP_ALLOWED_REDIRECT_HOSTS: z.string().default("claude.ai,claude.com"),
+  // The one key that unlocks the connector. Connector URL: <host>/mcp/<key>.
+  // Long and URL-safe; generate with: openssl rand -hex 32
+  MCP_API_KEY: z.string().regex(/^[A-Za-z0-9_-]{32,}$/),
   DB_HOST: z.string().min(1),
   DB_PORT: z.coerce.number().int().default(5432),
   DB_USER: z.string().min(1),
@@ -27,7 +22,7 @@ const Env = z.object({
   QUERY_MAX_ROWS: z.coerce.number().int().min(1).default(1000),
 });
 
-export type Config = z.infer<typeof Env> & { allowedRedirectHosts: string[] };
+export type Config = z.infer<typeof Env>;
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const parsed = Env.safeParse(env);
@@ -35,11 +30,5 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     const fields = parsed.error.issues.map((i) => i.path.join(".")).join(", ");
     throw new Error(`Invalid environment: ${fields}`);
   }
-  return {
-    ...parsed.data,
-    PUBLIC_URL: parsed.data.PUBLIC_URL.replace(/\/+$/, ""),
-    allowedRedirectHosts: parsed.data.MCP_ALLOWED_REDIRECT_HOSTS.split(",")
-      .map((h) => h.trim().toLowerCase())
-      .filter(Boolean),
-  };
+  return parsed.data;
 }

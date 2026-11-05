@@ -1,62 +1,65 @@
+import { createHash, timingSafeEqual } from "node:crypto";
 import express from "express";
-import type { Express } from "express";
+import type { Express, Request, Response } from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { mcpAuthRouter } from "@modelcontextprotocol/sdk/server/auth/router.js";
-import { requireBearerAuth } from "@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js";
-import { getOAuthProtectedResourceMetadataUrl } from "@modelcontextprotocol/sdk/server/auth/router.js";
 import type { Config } from "./config.ts";
 import type { Db } from "./db.ts";
 import { createMcpServer } from "./mcp.ts";
-import {
-  AdminDirectory,
-  KaderisasiOAuthProvider,
-  SCOPE,
-  signInRouter,
-  type GoogleVerifier,
-} from "./oauth.ts";
-import { Signer } from "./tokens.ts";
 
-export function createApp(
-  config: Config,
-  db: Db,
-  verifyGoogle: GoogleVerifier,
-): Express {
+function digest(value: string): Buffer {
+  return createHash("sha256").update(value).digest();
+}
+
+// Constant-time comparison of the given key with the configured one.
+export function keyMatches(given: string | undefined, expected: string) {
+  return (
+    given !== undefined && timingSafeEqual(digest(given), digest(expected))
+  );
+}
+
+function bearer(req: Request): string | undefined {
+  const match = /^Bearer\s+(\S+)$/i.exec(req.headers.authorization ?? "");
+  return match?.[1];
+}
+
+export function createApp(config: Config, db: Db): Express {
   const app = express();
   app.disable("x-powered-by");
-  // Coolify's proxy terminates TLS; rate limits key on the client address.
-  app.set("trust proxy", 1);
-
-  const provider = new KaderisasiOAuthProvider(
-    config,
-    new Signer(config.MCP_SIGNING_KEY),
-    new AdminDirectory(db),
-  );
-  const issuer = new URL(config.PUBLIC_URL);
-  const mcpUrl = new URL("/mcp", issuer);
 
   app.get("/health", (_req, res) => {
     res.json({ status: "ok" });
   });
 
-  app.use(
-    mcpAuthRouter({
-      provider,
-      issuerUrl: issuer,
-      resourceServerUrl: mcpUrl,
-      scopesSupported: [SCOPE],
-      resourceName: "Kaderisasi (read-only)",
-    }),
-  );
-  app.use(signInRouter(provider, verifyGoogle));
+  // Claude's connector dialog only takes a URL, so the key travels in the
+  // path: /mcp/<key>. Clients that can send headers may use /mcp with
+  // "Authorization: Bearer <key>" instead.
+  const authorized = (req: Request) =>
+    keyMatches(
+      typeof req.params.key === "string" ? req.params.key : bearer(req),
+      config.MCP_API_KEY,
+    );
 
-  const auth = requireBearerAuth({
-    verifier: provider,
-    requiredScopes: [SCOPE],
-    resourceMetadataUrl: getOAuthProtectedResourceMetadataUrl(mcpUrl),
-  });
-
-  // Stateless: a fresh server and transport per request.
-  app.post("/mcp", auth, express.json({ limit: "1mb" }), async (req, res) => {
+  const handle = async (req: Request, res: Response) => {
+    if (!authorized(req)) {
+      res.status(401).json({
+        jsonrpc: "2.0",
+        error: { code: -32001, message: "Unauthorized" },
+        id: null,
+      });
+      return;
+    }
+    if (req.method !== "POST") {
+      res
+        .status(405)
+        .set("Allow", "POST")
+        .json({
+          jsonrpc: "2.0",
+          error: { code: -32000, message: "Method not allowed" },
+          id: null,
+        });
+      return;
+    }
+    // Stateless: a fresh server and transport per request.
     const server = createMcpServer(db);
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
@@ -79,17 +82,11 @@ export function createApp(
         });
       }
     }
-  });
-  app.all("/mcp", auth, (_req, res) => {
-    res
-      .status(405)
-      .set("Allow", "POST")
-      .json({
-        jsonrpc: "2.0",
-        error: { code: -32000, message: "Method not allowed" },
-        id: null,
-      });
-  });
+  };
+
+  const json = express.json({ limit: "1mb" });
+  app.all("/mcp", json, handle);
+  app.all("/mcp/:key", json, handle);
 
   return app;
 }

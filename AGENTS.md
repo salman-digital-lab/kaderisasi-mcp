@@ -11,11 +11,10 @@ PostgreSQL database. When working in the full workspace, also read `../AGENTS.md
   schema owner. Schema changes come from Ace migrations in `../kaderisasi-admin-be`;
   after one adds a table or a secret-looking column, re-run (and if needed extend)
   `sql/grant-readonly.sql`.
-- Only active Super Admins may sign in (`AdminDirectory` in `src/oauth.ts`).
-  Do not widen this without the user's say-so: the connector reads counseling
-  and member personal data.
-- The server is stateless: OAuth clients, codes and tokens are HMAC-signed
-  (`src/tokens.ts`). Do not add a write-capable store for them.
+- Auth is one API key (`MCP_API_KEY`, env only, never committed), sent in the
+  path `/mcp/<key>` or as a Bearer header. Never log request paths: the key is
+  in them.
+- The server is stateless and keeps no store of its own.
 - Node 24 runs `.ts` directly: erasable syntax only, `.ts` import extensions.
 - Checks: `npm run typecheck`, `npm test`, `npm run format:check`.
-- End-to-end flow: `npm run test:flow` with `DB_*` and `TEST_SUPER_ADMIN_EMAIL`.
+- End-to-end flow: `npm run test:flow` with `DB_*` in the environment.
