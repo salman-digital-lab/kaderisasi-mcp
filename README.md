@@ -41,6 +41,14 @@ as secret.
 
 ### 1. Deploy (Coolify)
 
+Live as `kaderisasi-mcp-prod` (`khorpktuvc1aelfz3xzlavca`) in project
+"Kaderisasi Web" → production on BMKA Main Server, at
+`https://mcp-kaderisasi.salmanitb.com`. Pushing `main` doesn't auto-deploy;
+run `coolify deploy uuid khorpktuvc1aelfz3xzlavca`. The image ships `curl`
+because Coolify's health check needs it. Env vars are runtime-only.
+
+For a new install:
+
 Dockerfile build, container port `3020`, health check `GET /health`. Set the
 variables from `.env.example`: the same `DB_*` values as the admin API, plus
 `MCP_API_KEY` (`openssl rand -hex 32`).
