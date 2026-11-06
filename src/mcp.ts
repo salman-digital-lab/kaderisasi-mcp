@@ -25,8 +25,8 @@ Main tables:
 - reference data: universities, provinces, cities, countries
 
 Workflow: call list_tables, then describe_table before writing SQL against an unfamiliar table.
-Some secret columns (passwords, token hashes) are not readable; select columns explicitly
-instead of SELECT * on admin_users, public_users and legacy_members.
+Never return password or token hash columns (admin_users, public_users, legacy_members,
+admin_refresh_tokens, custom_form_sessions); select columns explicitly on those tables.
 Prefer aggregates (count, group by) over pulling many raw rows. Timestamps are timestamptz;
 report times in Asia/Jakarta (WIB) for users.`;
 

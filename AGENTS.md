@@ -7,10 +7,9 @@ PostgreSQL database. When working in the full workspace, also read `../AGENTS.md
 - **Never add a tool that writes**, calls the admin/web APIs with side effects,
   or reads outside `DB_SCHEMA`. All database access goes through `readOnly()`
   in `src/db.ts`.
-- The DB user must be `kaderisasi_mcp` from `sql/grant-readonly.sql`, never the
-  schema owner. Schema changes come from Ace migrations in `../kaderisasi-admin-be`;
-  after one adds a table or a secret-looking column, re-run (and if needed extend)
-  `sql/grant-readonly.sql`.
+- It connects with the same `DB_*` credentials as the admin API. Schema
+  changes come from Ace migrations in `../kaderisasi-admin-be`; nothing here
+  needs updating after one.
 - Auth is one API key (`MCP_API_KEY`, env only, never committed), sent in the
   path `/mcp/<key>` or as a Bearer header. Never log request paths: the key is
   in them.

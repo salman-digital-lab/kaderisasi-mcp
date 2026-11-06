@@ -11,19 +11,17 @@ connector).
 
 ## How it stays read-only
 
-Three independent locks:
+It reads the database directly with the app's existing DB credentials. Two
+locks keep it read-only:
 
-1. **Database user.** `kaderisasi_mcp` has only `SELECT` grants
-   (`sql/grant-readonly.sql`), `default_transaction_read_only = on` and a
-   statement timeout. Secrets are not granted: `admin_refresh_tokens`, and
-   every `password` / `*_token` / `token_hash` / `secret` column.
-2. **Read-only transaction.** Every call runs in `BEGIN READ ONLY … ROLLBACK`
+1. **Read-only transaction.** Every call runs in `BEGIN READ ONLY … ROLLBACK`
    with `statement_timeout` and `search_path` set locally.
-3. **Single SELECT.** `query` only accepts `SELECT`/`WITH`/`VALUES`/`TABLE`,
+2. **Single SELECT.** `query` only accepts `SELECT`/`WITH`/`VALUES`/`TABLE`,
    wraps it in a subquery with a row cap, and sends it with the extended
    protocol, which rejects a second statement.
 
-Only the `public` schema is exposed (`DB_SCHEMA`).
+Only the `public` schema is exposed (`DB_SCHEMA`). Everything in it is
+readable, including password hashes and token hashes.
 
 ## Auth
 
@@ -41,25 +39,13 @@ as secret.
 
 ## Setup
 
-### 1. Database user (once per database, by the DB owner)
-
-```sql
-CREATE ROLE kaderisasi_mcp LOGIN PASSWORD '<generated>' NOSUPERUSER
-  NOCREATEDB NOCREATEROLE NOINHERIT NOREPLICATION NOBYPASSRLS;
-```
-
-Then run `sql/grant-readonly.sql` as the owner. **Re-run it after migrations
-that add tables or columns** (new tables are invisible until then, and a new
-secret column is hidden only if its name matches the pattern; check the list in
-the script when adding one).
-
-### 2. Deploy (Coolify)
+### 1. Deploy (Coolify)
 
 Dockerfile build, container port `3020`, health check `GET /health`. Set the
-variables from `.env.example`; use the `kaderisasi_mcp` DB user, never the
-owner account. `MCP_API_KEY`: `openssl rand -hex 32`.
+variables from `.env.example`: the same `DB_*` values as the admin API, plus
+`MCP_API_KEY` (`openssl rand -hex 32`).
 
-### 3. Connect Claude
+### 2. Connect Claude
 
 claude.ai → Settings → Connectors → Add custom connector → Name
 `Kaderisasi`, URL `https://<host>/mcp/<MCP_API_KEY>`.

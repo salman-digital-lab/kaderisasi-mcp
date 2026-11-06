@@ -29,8 +29,6 @@ export function createDb(config: Config): Db {
 }
 
 // Every statement runs in a READ ONLY transaction that is always rolled back.
-// The database user should also be SELECT-only (see sql/create-readonly-user.sql);
-// this is the second lock, not the only one.
 export async function readOnly<T>(
   db: Db,
   fn: (client: pg.PoolClient) => Promise<T>,
