@@ -42,6 +42,31 @@ dashboard's words:
 - "Jenis Kelamin": M → Laki-Laki, F → Perempuan; empty shows as "-" (not filled in).
 - "Pendidikan Sekarang" comes from the member's education history; "Lencana" are badges.
 
+### Lencana first for SSC, LMD, SPECTRA, ITB SC and other programs
+Questions about a program or batch ("siapa yang sudah SSC?", "alumni LMD 208",
+"berapa peserta SPECTRA 9", "anggota ITBSC 2026") must be answered from member badges
+("Lencana", profiles.badges) first, not from activities:
+- profiles.badges is a JSON array of strings like "SSC-31", "LMD-208", "SPECTRA-9",
+  "ITBSC-2026". The format is PROGRAM-batch.
+- A badge means the member graduated (LULUS KEGIATAN). It is added automatically when a
+  registration for SSC, LMD, Komprof or SPECTRA is marked LULUS KEGIATAN (that activity's
+  activities.badge), and older alumni were imported with their badges.
+- Badges cover every batch back to the earliest (SSC-5, LMD-62, SPECTRA-1). The activities
+  table only holds batches run on the platform (roughly SSC-65+, LMD-233+, SPECTRA-15+), so
+  counting from activities misses most alumni.
+- "SSC-0" / "LMD-0" are alumni whose batch number was not recorded: count them as alumni of
+  that program, but say the batch is unknown.
+- Spelling varies ("ITBSC", "ITBSC-2026", "ITB SC 2026", "SSC-J 66"), so match loosely:
+  SELECT ... FROM profiles p, jsonb_array_elements_text(
+    CASE WHEN jsonb_typeof(p.badges)='array' THEN p.badges ELSE '[]' END) b
+  WHERE b ILIKE 'SSC%'              -- every SSC alumnus
+  -- or, for one batch:  WHERE b ~* '^SSC[- ]*31$'
+  Count DISTINCT p.id, since a member can hold several badges.
+- This matches the dashboard: menu Anggota, filter/column "Lencana".
+- Use activities + activity_registrations only for things badges cannot answer:
+  registrants who did not graduate, registration status (TERDAFTAR, DITERIMA, ...),
+  dates, or a batch that is still running. Say which source you used.
+
 ### Kegiatan (activities)
 - "Tipe Kegiatan" (activities.activity_type): 0 Umum, 1 Umum - Hanya Pendaftaran,
   2 Spiritual Camp (SSC), 3 LMD, 4 Komunitas Profesi (Komprof), 5 SPECTRA, 20 sub-program (child of another activity).
