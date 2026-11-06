@@ -64,7 +64,12 @@ test("tools work and stay read-only", { skip }, async (t) => {
   const path = `/mcp/${key}`;
   const list = await rpc(path, "tools/list");
   const names = list.body.result.tools.map((x: { name: string }) => x.name);
-  assert.deepEqual(names.sort(), ["describe_table", "list_tables", "query"]);
+  assert.deepEqual(names.sort(), [
+    "dashboard_glossary",
+    "describe_table",
+    "list_tables",
+    "query",
+  ]);
 
   const call = async (name: string, args = {}) => {
     const r = await rpc(path, "tools/call", { name, arguments: args });

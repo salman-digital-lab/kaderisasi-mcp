@@ -7,6 +7,7 @@ import {
   runQuery,
   type Db,
 } from "./db.ts";
+import { GLOSSARY } from "./glossary.ts";
 
 const INSTRUCTIONS = `Read-only access to the Salman ITB (BMKA) Kaderisasi database (PostgreSQL).
 Kaderisasi is the member cadre-development platform. Data and UI terms are Indonesian.
@@ -28,7 +29,9 @@ Workflow: call list_tables, then describe_table before writing SQL against an un
 Never return password or token hash columns (admin_users, public_users, legacy_members,
 admin_refresh_tokens, custom_form_sessions); select columns explicitly on those tables.
 Prefer aggregates (count, group by) over pulling many raw rows. Timestamps are timestamptz;
-report times in Asia/Jakarta (WIB) for users.`;
+report times in Asia/Jakarta (WIB) for users.
+
+${GLOSSARY}`;
 
 function json(value: unknown) {
   return { content: [{ type: "text" as const, text: JSON.stringify(value) }] };
@@ -49,6 +52,17 @@ export function createMcpServer(db: Db): McpServer {
   const server = new McpServer(
     { name: "kaderisasi", version: "0.1.0" },
     { instructions: INSTRUCTIONS },
+  );
+
+  server.registerTool(
+    "dashboard_glossary",
+    {
+      title: "Dashboard terms",
+      description:
+        "The admin dashboard's menu names, column titles and status labels, mapped to tables and stored codes. Read this before answering so replies use dashboard terms.",
+      annotations: readOnlyHints,
+    },
+    async () => ({ content: [{ type: "text" as const, text: GLOSSARY }] }),
   );
 
   server.registerTool(

@@ -17,3 +17,7 @@ PostgreSQL database. When working in the full workspace, also read `../AGENTS.md
 - Node 24 runs `.ts` directly: erasable syntax only, `.ts` import extensions.
 - Checks: `npm run typecheck`, `npm test`, `npm run format:check`.
 - End-to-end flow: `npm run test:flow` with `DB_*` in the environment.
+- `src/glossary.ts` maps the admin dashboard's wording (menu names, column titles,
+  status labels) to tables and stored codes, so Claude answers in dashboard terms.
+  When `../kaderisasi-admin-fe` renames a menu or label, or a new status code
+  appears, update it there too.
