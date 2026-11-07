@@ -27,7 +27,8 @@ Main tables:
 
 Workflow: call list_tables, then describe_table before writing SQL against an unfamiliar table.
 Never return password or token hash columns (admin_users, public_users, legacy_members,
-admin_refresh_tokens, custom_form_sessions); select columns explicitly on those tables.
+admin_refresh_tokens, custom_form_sessions, public_user_email_changes); select columns
+explicitly on those tables.
 Prefer aggregates (count, group by) over pulling many raw rows. Timestamps are timestamptz;
 report times in Asia/Jakarta (WIB) for users.
 
