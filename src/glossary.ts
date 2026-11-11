@@ -110,4 +110,5 @@ Questions about a program or batch ("siapa yang sudah SSC?", "alumni LMD 208",
 ### Peran admin (admin_users.role_code / additional_role_codes)
 super_admin Super Admin, admin Asisten Manager Program, activity_manager Panitia
 Program/Kegiatan, achievement_manager Pengelola Prestasi, club_manager Pengelola Komunitas,
-konselor Konselor, perintis_manager Pengelola Perintis, p3ri Panitia P3RI.`;
+konselor Konselor, perintis_manager Pengelola Perintis, p3ri Panitia P3RI, alumni_manager Pengelola
+Alumni.`;
