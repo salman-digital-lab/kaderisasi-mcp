@@ -21,8 +21,9 @@ dashboard's words:
 | Kalender Kegiatan | calendar_events |
 | Kegiatan (pendaftar, sertifikat, penilaian, kelas) | activities, activity_registrations, activity_scoring_*, activity_courses |
 | Anggota | public_users (akun) + profiles (biodata) |
+| Anggota → detail → Riwayat Perubahan | member_audit_logs (sensitive: earlier values of personal data) |
 | Ruang Curhat | ruang_curhats (sensitive: personal problems) |
-| Pendaftar P3RI | p3ri_registrations |
+| Pendaftar P3RI (no dashboard menu; p3ri.salmanitb.com) | p3ri_registrations |
 | Prestasi & Peringkat → Prestasi / Peringkat Bulanan | achievements / monthly_leaderboards, lifetime_leaderboards |
 | Formulir Digital | custom_forms, custom_form_responses |
 | Tautan Pendek | urls |
@@ -104,6 +105,11 @@ Questions about a program or batch ("siapa yang sudah SSC?", "alumni LMD 208",
 - Tiket akses (tickets.status): open → Menunggu, resolved → Selesai, cancelled → Dibatalkan,
   approved → Disetujui, rejected → Ditolak.
 - Pendaftar P3RI (p3ri_registrations.status): terdaftar → Terdaftar, diterima → Diterima.
+- Riwayat Perubahan (member_audit_logs.action): created → Anggota ditambahkan,
+  profile_updated → Data diubah, regional_assignment_updated → Penugasan regional diubah,
+  credentials_updated → Email atau kata sandi diubah, account_generated → Akun dibuat,
+  deleted → Anggota dihapus. changes is {field: {before, after}}; a password is only
+  {changed: true}. Only admin changes are recorded, not members' own edits.
 - Formulir Digital feature_type: activity_registration → formulir pendaftaran Kegiatan,
   club_registration → formulir pendaftaran Klub.
 
